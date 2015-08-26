@@ -7,7 +7,7 @@
 
 var testFixture = require('../../_globals.js');
 
-describe('CorePlugins', function () {
+describe.only('CorePlugins', function () {
 
     var gmeConfig = testFixture.getGmeConfig(),
         Q = testFixture.Q,
@@ -21,6 +21,7 @@ describe('CorePlugins', function () {
 
         pluginNames = [
             'ConfigurationArtifact',
+            'DecoratorGenerator',
             'ExecutorPlugin',
             'ExportImport',
             'MergeExample',
