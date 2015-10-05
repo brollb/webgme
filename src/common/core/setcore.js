@@ -137,8 +137,29 @@ define(['common/util/assert'], function (ASSERT) {
             return this.getSetNames(node).length;
         };
 
+        function collectSetNames(node) {
+            var sets = [],
+                setsInfo,
+                keys, i;
+            do {
+                setsInfo = setCore.getProperty(node, SETS_ID);
+                if (setsInfo && setsInfo['ovr'] && setsInfo['ovr']['']) {
+                    keys = Object.keys(setsInfo['ovr']['']);
+                    for (i = 0; i < keys.length; i += 1) {
+                        if (keys[i] !== '_mutable' && sets.indexOf(keys[i]) === -1) {
+                            sets.push(keys[i]);
+                        }
+                    }
+                }
+                node = setCore.getBase(node);
+            } while (node);
+
+            return sets;
+        }
+
         setCore.getSetNames = function (node) {
-            return innerCore.getPointerNames(innerCore.getChild(node, SETS_ID)) || [];
+            //return innerCore.getPointerNames(innerCore.getChild(node, SETS_ID)) || [];
+            return collectSetNames(node);
         };
 
         setCore.getPointerNames = function (node) {
@@ -163,21 +184,77 @@ define(['common/util/assert'], function (ASSERT) {
             return sorted;
         };
 
+        function collectInternalMemberRelids(node, setName) {
+            var setInfo,
+                relids = [],
+                keys, i;
+
+            do {
+                setInfo = setCore.getProperty(node, SETS_ID);
+                if (setInfo && setInfo[setName]) {
+                    keys = setCore.getRawKeys(setInfo[setName], function (key) {
+                        if (key.indexOf('_') !== 0 && key !== 'reg' && key !== 'atr') {
+                            return true;
+                        }
+                        return false;
+                    });
+                    for (i = 0; i < keys.length; i += 1) {
+                        if (relids.indexOf(keys[i]) === -1) {
+                            relids.push(keys[i]);
+                        }
+                    }
+                }
+                node = setCore.getBase(node);
+            } while (node);
+
+            return relids;
+        }
+
+        function collectMemberPath(node, setName, innerRelid) {
+            var source = '/' + SETS_ID + '/' + setName + '/' + innerRelid,
+                path = undefined,
+                tempPath;
+
+            do {
+                tempPath = innerCore.getPointerPathFrom(node, source, 'member');
+                if (tempPath !== undefined) {
+                    path = tempPath;
+                }
+                node = setCore.getBase(node);
+            } while (node);
+
+            return path;
+        }
+
         setCore.getMemberPaths = function (node, setName) {
-            harmonizeMemberData(node, setName);
-            ASSERT(typeof setName === 'string');
-            var setNode = innerCore.getChild(innerCore.getChild(node, SETS_ID), setName);
-            var members = [];
-            var elements = innerCore.getChildrenRelids(setNode);
-            elements = elements.sort(); //TODO this should be removed at some point
-            for (var i = 0; i < elements.length; i++) {
-                var path = getMemberPath(node, innerCore.getChild(setNode, elements[i]));
-                if (path) {
-                    members.push(path);
+            var memberRelids = collectInternalMemberRelids(node, setName),
+                pathPrefix = '/' + SETS_ID + '/' + setName + '/',
+                i, path,
+                memberPaths = [];
+            for (i = 0; i < memberRelids.length; i += 1) {
+                path = collectMemberPath(node,setName,memberRelids[i]);
+                if (path !== undefined) { //null and '' are valid targets
+                    memberPaths.push(path);
                 }
             }
-            return members;
+            return memberPaths;
         };
+
+        //setCore.getMemberPaths = function (node, setName) {
+        //    harmonizeMemberData(node, setName);
+        //    ASSERT(typeof setName === 'string');
+        //    var setNode = innerCore.getChild(innerCore.getChild(node, SETS_ID), setName);
+        //    var members = [];
+        //    var elements = innerCore.getChildrenRelids(setNode);
+        //    elements = elements.sort(); //TODO this should be removed at some point
+        //    for (var i = 0; i < elements.length; i++) {
+        //        var path = getMemberPath(node, innerCore.getChild(setNode, elements[i]));
+        //        if (path) {
+        //            members.push(path);
+        //        }
+        //    }
+        //    return members;
+        //};
 
         setCore.delMember = function (node, setName, memberPath) {
             ASSERT(typeof setName === 'string');
