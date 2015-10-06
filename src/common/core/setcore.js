@@ -28,6 +28,13 @@ define(['common/util/assert'], function (ASSERT) {
             innerCore.setRegistry(node, '_sets_', (innerCore.getRegistry(node, '_sets_') || 0) + 1);
         }
 
+        function relIdSelector(key) {
+            if (key.indexOf('_') !== 0 && key !== 'reg' && key !== 'atr') {
+                return true;
+            }
+            return false;
+        }
+
         function getMemberPath(node, setElementNode) {
             var ownPath = innerCore.getPath(node),
                 memberPath = innerCore.getPointerPath(setElementNode, REL_ID);
@@ -57,16 +64,38 @@ define(['common/util/assert'], function (ASSERT) {
 
         }
 
-        function getMemberRelId(node, setName, memberPath) {
-            ASSERT(typeof setName === 'string');
-            var setNode = innerCore.getChild(innerCore.getChild(node, SETS_ID), setName);
-            var elements = innerCore.getChildrenRelids(setNode);
+        //function getMemberRelId(node, setName, memberPath) {
+        //    ASSERT(typeof setName === 'string');
+        //    var setNode = innerCore.getChild(innerCore.getChild(node, SETS_ID), setName);
+        //    var elements = innerCore.getChildrenRelids(setNode);
+        //
+        //    for (var i = 0; i < elements.length; i++) {
+        //        if (getMemberPath(node, innerCore.getChild(setNode, elements[i])) === memberPath) {
+        //            return elements[i];
+        //        }
+        //    }
+        //    return null;
+        //}
 
-            for (var i = 0; i < elements.length; i++) {
-                if (getMemberPath(node, innerCore.getChild(setNode, elements[i])) === memberPath) {
-                    return elements[i];
+        function getMemberRelId(node, setName, memberPath) {
+            var setInfo,
+                keys, i;
+
+            do {
+                setInfo = setCore.getProperty(node, SETS_ID);
+                if (setInfo && setInfo[setName]) {
+                    keys = setCore.getRawKeys(setInfo[setName], relIdSelector);
+                    for (i = 0; i < keys.length; i += 1) {
+                        if (innerCore
+                                .getPointerPathFrom(node, '/' + SETS_ID + '/' + setName + '/' + keys[i], REL_ID) ===
+                            memberPath) {
+                            return keys[i];
+                        }
+                    }
                 }
-            }
+                node = setCore.getBase(node);
+            } while (node);
+
             return null;
         }
 
@@ -192,12 +221,7 @@ define(['common/util/assert'], function (ASSERT) {
             do {
                 setInfo = setCore.getProperty(node, SETS_ID);
                 if (setInfo && setInfo[setName]) {
-                    keys = setCore.getRawKeys(setInfo[setName], function (key) {
-                        if (key.indexOf('_') !== 0 && key !== 'reg' && key !== 'atr') {
-                            return true;
-                        }
-                        return false;
-                    });
+                    keys = setCore.getRawKeys(setInfo[setName], relIdSelector);
                     for (i = 0; i < keys.length; i += 1) {
                         if (relids.indexOf(keys[i]) === -1) {
                             relids.push(keys[i]);
@@ -235,14 +259,14 @@ define(['common/util/assert'], function (ASSERT) {
         }
 
         setCore.getMemberPaths = function (node, setName) {
-            harmonizeMemberData(node, setName);
+            //harmonizeMemberData(node, setName);
             var memberRelids = collectInternalMemberRelids(node, setName),
                 pathPrefix = '/' + SETS_ID + '/' + setName + '/',
                 i, path,
                 memberPaths = [];
             for (i = 0; i < memberRelids.length; i += 1) {
                 path = collectMemberPath(node, setName, memberRelids[i]);
-                if (path !== undefined) { //null and '' are valid targets
+                if (path !== undefined && memberPaths.indexOf(path) === -1) { //null and '' are valid targets
                     memberPaths.push(path);
                 }
             }
@@ -303,40 +327,43 @@ define(['common/util/assert'], function (ASSERT) {
         //TODO: innerCore.getChild(innerCore.getChild(node, SETS_ID), setName), memberRelId);
 
         setCore.getMemberAttributeNames = function (node, setName, memberPath) {
-            ASSERT(typeof setName === 'string');
-            harmonizeMemberData(node, setName);
-            var memberRelId = getMemberRelId(node, setName, memberPath);
-            if (memberRelId) {
-                var memberNode = innerCore.getChild(
-                    innerCore.getChild(innerCore.getChild(node, SETS_ID), setName), memberRelId);
-
-                return innerCore.getAttributeNames(memberNode);
-            }
-            return [];
+            //ASSERT(typeof setName === 'string');
+            //harmonizeMemberData(node, setName);
+            //var memberRelId = getMemberRelId(node, setName, memberPath);
+            //if (memberRelId) {
+            //    var memberNode = innerCore.getChild(
+            //        innerCore.getChild(innerCore.getChild(node, SETS_ID), setName), memberRelId);
+            //
+            //    return innerCore.getAttributeNames(memberNode);
+            //}
+            //return [];
+            return collectPropertyNames(node, setName, memberPath, 'atr');
         };
 
         setCore.getMemberOwnAttributeNames = function (node, setName, memberPath) {
-            ASSERT(typeof setName === 'string');
-            var memberRelId = getMemberRelId(node, setName, memberPath);
-            if (memberRelId) {
-                var memberNode = innerCore.getChild(
-                    innerCore.getChild(innerCore.getChild(node, SETS_ID), setName), memberRelId);
-
-                return innerCore.getOwnAttributeNames(memberNode);
-            }
-            return [];
+            //ASSERT(typeof setName === 'string');
+            //var memberRelId = getMemberRelId(node, setName, memberPath);
+            //if (memberRelId) {
+            //    var memberNode = innerCore.getChild(
+            //        innerCore.getChild(innerCore.getChild(node, SETS_ID), setName), memberRelId);
+            //
+            //    return innerCore.getOwnAttributeNames(memberNode);
+            //}
+            //return [];
+            return collectOwnPropertyNames(node, setName, memberPath, 'atr');
         };
 
         setCore.getMemberAttribute = function (node, setName, memberPath, attrName) {
-            harmonizeMemberData(node, setName);
-            ASSERT(typeof setName === 'string' && typeof attrName === 'string');
-            var memberRelId = getMemberRelId(node, setName, memberPath);
-            if (memberRelId) {
-                var memberNode = innerCore.getChild(
-                    innerCore.getChild(innerCore.getChild(node, SETS_ID), setName), memberRelId);
-
-                return innerCore.getAttribute(memberNode, attrName);
-            }
+            //harmonizeMemberData(node, setName);
+            //ASSERT(typeof setName === 'string' && typeof attrName === 'string');
+            //var memberRelId = getMemberRelId(node, setName, memberPath);
+            //if (memberRelId) {
+            //    var memberNode = innerCore.getChild(
+            //        innerCore.getChild(innerCore.getChild(node, SETS_ID), setName), memberRelId);
+            //
+            //    return innerCore.getAttribute(memberNode, attrName);
+            //}
+            return getPropertyValue(node, setName, memberPath, 'atr', attrName);
         };
 
         setCore.setMemberAttribute = function (node, setName, memberPath, attrName, attrValue) {
@@ -364,43 +391,138 @@ define(['common/util/assert'], function (ASSERT) {
             }
         };
 
-        setCore.getMemberRegistryNames = function (node, setName, memberPath) {
-            ASSERT(typeof setName === 'string');
-            harmonizeMemberData(node, setName);
-            var memberRelId = getMemberRelId(node, setName, memberPath);
-            if (memberRelId) {
-                var memberNode = innerCore.getChild(
-                    innerCore.getChild(innerCore.getChild(node, SETS_ID), setName), memberRelId);
+        function collectPropertyNames(node, setName, memberPath, propertyName) {
+            var relId,
+                names = [],
+                memberInfo,
+                keys, i;
 
-                return innerCore.getRegistryNames(memberNode);
+            do {
+                relId = getMemberRelId(node, setName, memberPath);
+                if (relId) {
+                    memberInfo = setCore.getProperty(node, SETS_ID) || {};
+                    memberInfo = memberInfo[setName] || {};
+                    memberInfo = memberInfo[relId] || {};
+                    memberInfo = memberInfo[propertyName] || {};
+                    keys = innerCore.getRawKeys(memberInfo, relIdSelector);
+                    for (i = 0; i < keys.length; i += 1) {
+                        if (names.indexOf(keys[i]) === -1) {
+                            names.push(keys[i]);
+                        }
+                    }
+                } else {
+                    return names; //because there is no more relation towards the given path
+                }
+                node = setCore.getBase(node);
+            } while (node);
+
+            return names;
+        }
+
+        function collectOwnPropertyNames(node, setName, memberPath, propertyName) {
+            var relId,
+                names = [],
+                memberInfo,
+                keys, i;
+
+            relId = getMemberRelId(node, setName, memberPath);
+            if (relId) {
+                memberInfo = setCore.getProperty(node, SETS_ID) || {};
+                memberInfo = memberInfo[setName] || {};
+                memberInfo = memberInfo[relId] || {};
+                memberInfo = memberInfo[propertyName] || {};
+                keys = innerCore.getRawKeys(memberInfo, relIdSelector);
+                for (i = 0; i < keys.length; i += 1) {
+                    if (names.indexOf(keys[i]) === -1) {
+                        names.push(keys[i]);
+                    }
+                }
             }
-            return [];
+
+            return names;
+        }
+
+        function getPropertyValue(node, setName, memberPath, propertyCollectionName, propertyName) {
+            var relId,
+                memberInfo,
+                value;
+
+            do {
+                relId = getMemberRelId(node, setName, memberPath);
+                if (relId) {
+                    memberInfo = setCore.getProperty(node, SETS_ID) || {};
+                    memberInfo = memberInfo[setName] || {};
+                    memberInfo = memberInfo[relId] || {};
+                    memberInfo = memberInfo[propertyCollectionName] || {};
+                    value = memberInfo[propertyName];
+                    if (value !== undefined) {
+                        return value;
+                    }
+                } else {
+                    return undefined; //because there is no more relation towards the given path
+                }
+                node = setCore.getBase(node);
+            } while (node);
+
+            return undefined;
+        }
+
+        function getOwnPropertyValue(node, setName, memberPath, propertyCollectionName, propertyName) {
+            var relId,
+                memberInfo;
+
+            relId = getMemberRelId(node, setName, memberPath);
+            if (relId) {
+                memberInfo = setCore.getProperty(node, SETS_ID) || {};
+                memberInfo = memberInfo[setName] || {};
+                memberInfo = memberInfo[relId] || {};
+                memberInfo = memberInfo[propertyCollectionName] || {};
+                return memberInfo[propertyName];
+            }
+
+            return undefined;
+        }
+
+        setCore.getMemberRegistryNames = function (node, setName, memberPath) {
+            //ASSERT(typeof setName === 'string');
+            //harmonizeMemberData(node, setName);
+            //var memberRelId = getMemberRelId(node, setName, memberPath);
+            //if (memberRelId) {
+            //    var memberNode = innerCore.getChild(
+            //        innerCore.getChild(innerCore.getChild(node, SETS_ID), setName), memberRelId);
+            //
+            //    return innerCore.getRegistryNames(memberNode);
+            //}
+            //return [];
+            return collectPropertyNames(node, setName, memberPath, 'reg');
         };
         setCore.getMemberOwnRegistryNames = function (node, setName, memberPath) {
-            ASSERT(typeof setName === 'string');
-            var memberRelId = getMemberRelId(node, setName, memberPath);
-            if (memberRelId) {
-                var memberNode = innerCore.getChild(
-                    innerCore.getChild(innerCore.getChild(node, SETS_ID), setName), memberRelId);
-
-                return innerCore.getOwnRegistryNames(memberNode);
-            }
-            return [];
+            //ASSERT(typeof setName === 'string');
+            //var memberRelId = getMemberRelId(node, setName, memberPath);
+            //if (memberRelId) {
+            //    var memberNode = innerCore.getChild(
+            //        innerCore.getChild(innerCore.getChild(node, SETS_ID), setName), memberRelId);
+            //
+            //    return innerCore.getOwnRegistryNames(memberNode);
+            //}
+            //return [];
+            return collectOwnPropertyNames(node, setName, memberPath, 'reg');
         };
         setCore.getMemberRegistry = function (node, setName, memberPath, regName) {
-            ASSERT(typeof setName === 'string' && typeof regName === 'string');
-            harmonizeMemberData(node, setName);
-            var memberRelId = getMemberRelId(node, setName, memberPath);
-            if (memberRelId) {
-                var memberNode = innerCore.getChild(
-                    innerCore.getChild(innerCore.getChild(node, SETS_ID), setName), memberRelId);
-
-                return innerCore.getRegistry(memberNode, regName);
-            }
+            //ASSERT(typeof setName === 'string' && typeof regName === 'string');
+            //harmonizeMemberData(node, setName);
+            //var memberRelId = getMemberRelId(node, setName, memberPath);
+            //if (memberRelId) {
+            //    var memberNode = innerCore.getChild(
+            //        innerCore.getChild(innerCore.getChild(node, SETS_ID), setName), memberRelId);
+            //
+            //    return innerCore.getRegistry(memberNode, regName);
+            //}
+            return getPropertyValue(node, setName, memberPath, 'reg', regName);
         };
         setCore.setMemberRegistry = function (node, setName, memberPath, regName, regValue) {
             ASSERT(typeof setName === 'string' && typeof regName === 'string' && regValue !== undefined);
-            harmonizeMemberData(node, setName);
+            //harmonizeMemberData(node, setName);
             var memberRelId = getMemberRelId(node, setName, memberPath);
             if (memberRelId) {
                 var memberNode = innerCore.getChild(
