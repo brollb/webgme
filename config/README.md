@@ -66,7 +66,7 @@ To start the server using the configuration above:
 - `config.client.appDir = './src/client'`
  - Directory from where to serve the static files for the webapp. This should only be modified if you are using a custom UI.
 - `config.client.log.level = 'debug'`
- - When debug is activated in the browser (`localStorage.debug = gme*`) messages below this level will not be printed.
+ - When [debug](https://github.com/visionmedia/debug) is activated in the browser (type `localStorage.debug = gme*` in the console and refresh the page) messages below this level will not be printed.
 - `config.client.usedDecorators = ['ModelDecorator', 'MetaDecorator', ... see config]`
  - Decorators to load from the server before the editor starts.
 - `config.client.defaultContext.project = null`
@@ -127,12 +127,12 @@ To start the server using the configuration above:
 - `config.rest.components = {}`
  -  Routing path (keys) from `/rest/external/` and file-path (values) to custom REST components.
 
-**seedProject**
-- `config.seedProject.enable = true`
+**seedProjects**
+- `config.seedProjects.enable = true`
  - Enables creation of new projects using seeds.
-- `config.seedProject.defaultProject = 'EmptyProject'`
+- `config.seedProjects.defaultProject = 'EmptyProject'`
  - Used by the GUI when highlighting/selecting the default project to seed from.
-- `config.seedProject.basePaths = ['./seeds']`
+- `config.seedProjects.basePaths = ['./seeds']`
  - List of directories where project seeds are stored.
 
 **server**
