@@ -28,13 +28,13 @@
       "id": "ObjectBrowserPanel",
       "panel": "ObjectBrowser/ObjectBrowserPanel",
       "container": "east",
-      "DEBUG_ONLY": false
+      "DEBUG_ONLY": true
     },
     {
       "id": "PropertyEditorPanel",
       "panel": "PropertyEditor/PropertyEditorPanel",
       "container": "east",
-      "DEBUG_ONLY": false
+      "DEBUG_ONLY": true
     }
   ]
 }
