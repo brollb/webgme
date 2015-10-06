@@ -210,6 +210,11 @@ define(['common/util/assert'], function (ASSERT) {
             return relids;
         }
 
+        function getContainerNodePath(node) {
+            var ownPath = setCore.getPath(node);
+            return ownPath.substring(0, ownPath.indexOf('/_'));
+        }
+
         function collectMemberPath(node, setName, innerRelid) {
             var source = '/' + SETS_ID + '/' + setName + '/' + innerRelid,
                 path = undefined,
@@ -219,6 +224,9 @@ define(['common/util/assert'], function (ASSERT) {
                 tempPath = innerCore.getPointerPathFrom(node, source, 'member');
                 if (tempPath !== undefined) {
                     path = tempPath;
+                    if (path !== getContainerNodePath(node)) {
+                        break;
+                    }
                 }
                 node = setCore.getBase(node);
             } while (node);
@@ -227,12 +235,13 @@ define(['common/util/assert'], function (ASSERT) {
         }
 
         setCore.getMemberPaths = function (node, setName) {
+            harmonizeMemberData(node, setName);
             var memberRelids = collectInternalMemberRelids(node, setName),
                 pathPrefix = '/' + SETS_ID + '/' + setName + '/',
                 i, path,
                 memberPaths = [];
             for (i = 0; i < memberRelids.length; i += 1) {
-                path = collectMemberPath(node,setName,memberRelids[i]);
+                path = collectMemberPath(node, setName, memberRelids[i]);
                 if (path !== undefined) { //null and '' are valid targets
                     memberPaths.push(path);
                 }
