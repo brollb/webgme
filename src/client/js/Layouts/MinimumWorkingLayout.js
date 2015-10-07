@@ -1,4 +1,4 @@
-/*globals define, DEBUG, WebGMEGlobal, $ */
+/*globals define, WebGMEGlobal, $ */
 define([
     'js/logger',
     'js/Layouts/DefaultLayout',
@@ -20,13 +20,22 @@ define([
         SPACING_OPEN = WebGMEGlobal.SUPPORTS_TOUCH ? SPACING_OPEN_TOUCH : SPACING_OPEN_DESKTOP,
         SPACING_CLOSED = WebGMEGlobal.SUPPORTS_TOUCH ? SPACING_CLOSED_TOUCH : SPACING_CLOSED_DESKTOP,
         SIDE_PANEL_WIDTH = 202;
+
     var MinimumWorkingLayout = function(params) {
         this._logger = (params && params.logger) || Logger.create('gme:Layouts:DefaultLayout',
             WebGMEGlobal.gmeConfig.client.log);
         this.panels = CONFIG.panels;
         this._template = (params && params.template) || defaultLayoutTemplate;
+
+        this._body = null;
+        this._panelToContainer = {};
     };
 
+    /**
+     * Initialize the html page. This example is using the jQuery Layout plugin.
+     *
+     * @return {undefined}
+     */
     MinimumWorkingLayout.prototype.init = function() {
         var self = this;
 
@@ -39,7 +48,7 @@ define([
         this._headerPanel = this._body.find('div.ui-layout-north');
         this._footerPanel = this._body.find('div.ui-layout-south');
 
-        this._centerPanels = [];
+        this._canvas = null;
         this._toolbox = null;
         this._body.layout({
             north: {
@@ -75,6 +84,14 @@ define([
         });
     };
 
+    /**
+     * Add a panel to a given container. This is defined in the corresponding
+     * layout config JSON file.
+     *
+     * @param {Panel} panel
+     * @param {String} container
+     * @return {undefined}
+     */
     MinimumWorkingLayout.prototype.addToContainer = function(panel, container) {
         if (container === 'header') {
             this._headerPanel.append(panel.$pEl);
@@ -82,28 +99,49 @@ define([
             this._footerPanel.append(panel.$pEl);
         } else if (container === 'toolbox') {
             this._toolboxPanel.append(panel.$pEl);
+            this._toolbox = panel;
             this._onToolboxResize();
         } else if (container === 'center') {
             this._centerPanel.append(panel.$pEl);
-            this._centerPanels.push(panel);
+            this._canvas = panel;
             this._onCenterResize();
             return this._onCenterResize;
         }
-        console.log('adding panel', panel, 'to container', container);
     };
 
+    /**
+     * Remove the given panel from the views
+     *
+     * @param {Panel} panel
+     * @return {undefined}
+     */
     MinimumWorkingLayout.prototype.remove = function(panel) {
-        DefaultLayout.prototype.remove.call(this, panel);
-        console.log('removing panel!', panel);
+        if (this._toolbox === panel) {
+            this._toolboxPanel.empty();
+        } else if (this._canvas === panel) {
+            this._centerPanel.empty();
+        }
     };
 
+    /**
+     * Remove the current layout
+     *
+     * @return {undefined}
+     */
     MinimumWorkingLayout.prototype.destroy = function() {
-        DefaultLayout.prototype.remove.call(this);
-        console.log('destroying layout!');
+        this._body.empty();
     };
 
     // Resize handlers
-    MinimumWorkingLayout.prototype._onCenterResize = DefaultLayout.prototype._onCenterResize;
+    //
+    // These are internally called and used by the example to provide a responsive
+    // UI (even if it is simply scaling linearly here)
+    MinimumWorkingLayout.prototype._onCenterResize = function() {
+        if (this._canvas) {
+            this._canvas.setSize(this._centerPanel.width(), this._centerPanel.height());
+        }
+    };
+
     MinimumWorkingLayout.prototype._onToolboxResize = function() {
         if (this._toolbox) {
             this._toolbox.setSize(this._toolboxPanel.width(), this._toolboxPanel.height());
